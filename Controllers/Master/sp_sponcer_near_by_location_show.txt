@@ -1,0 +1,454 @@
+CREATE DEFINER=`khushali`@`%` PROCEDURE `sp_sponcer_near_by_location_show`(
+    IN in_latitude DECIMAL(11, 8),
+    IN in_longitude DECIMAL(11, 8),
+    IN in_from INT,
+    IN in_to INT,
+    IN in_limit INT,
+    IN in_page_no INT
+)
+BEGIN DECLARE in_offset INT;
+
+SET
+    in_offset = (in_page_no - 1) * in_limit;
+
+select
+    *,
+    count(*) over() AS total_record
+from
+    (
+        (
+            SELECT
+                CS.car_sell_inventory_code AS ID,
+                CAT.cat_name as Category,
+                SUB.sub_cat_name as Sub_category,
+                CS.c_picture_link_1 as Image,
+                CS.car_title as Name,
+                CS.c_price as Price,
+                0 as from_salary,
+                0 as to_salary,
+                CS.c_location as location,
+                CS.latitude,
+                CS.longitude,
+                (
+                    ACOS(
+                        COS(RADIANS(in_latitude)) * COS(RADIANS(CS.latitude)) * COS(RADIANS(CS.longitude) - RADIANS(in_longitude)) + SIN(RADIANS(in_latitude)) * SIN(RADIANS(CS.latitude))
+                    ) * 6371
+                ) AS distance_in_km,
+                DATE_FORMAT(CS.created_at, '%d %b %y') as Create_Date,
+                CS.modified_at as Modify_Date,
+                CASE WHEN CS.modified_at > CS.created_at THEN CS.modified_at ELSE CS.created_at END AS ORDER_DATE,
+                "" as office_furnished,
+                SM.state_name AS car_registration_state,
+                CS.c_km AS car_km,
+                CO.name AS owner,
+                0 as Bedroom,
+                0 as Bathroom,
+                0 as Cabin,
+                0 as Washroom,
+                0 as Square_Feet,
+                '' as Mobile_ram,
+                '' as Mobile_rom,
+                YM.value as year_of_registration,
+                0 as vehicle_km,
+                '' as Job_type,
+                '' as Job_salary_period
+            FROM
+                bsapp_db.car_sell_inventory_mast AS CS
+                LEFT JOIN bsapp_db.category_mast CAT ON CS.cat_id = CAT.id
+                LEFT JOIN bsapp_db.sub_category_mast SUB ON CS.sub_cat_id = SUB.id
+                LEFT JOIN bsapp_db.ads_mast AD ON CS.car_sell_inventory_code = AD.inventory_code
+                LEFT JOIN bsapp_db.car_model_name_mast CM ON CM.id = CS.car_model_name
+                LEFT JOIN bsapp_db.car_owner_mast CO ON CO.id = CS.c_owner
+                LEFT JOIN bsapp_db.year_mast YM ON YM.id = CS.year
+                LEFT JOIN bsapp_db.state_mast SM ON SM.id = CS.c_registration
+                left join bsapp_db.package_inventory_mast PI ON CS.car_sell_inventory_code = PI.inventory_code and CS.inventory_type = PI.inventory_type
+                left join bsapp_db.purchase_ads_mast PA ON PI.purchase_ads_id = PA.id
+
+            WHERE
+                 PA.is_active = 1
+            HAVING
+                distance_in_km BETWEEN in_from
+                AND in_to
+            ORDER BY
+                distance_in_km ASC
+        )
+        UNION
+        (
+            SELECT
+                AI.all_inventory_code AS ID,
+                CAT.cat_name as Category,
+                SUB.sub_cat_name as Sub_category,
+                AI.picture_link_1 as Image,
+                AI.title as Name,
+                AI.price as Price,
+                0 as from_salary,
+                0 as to_salary,
+                AI.location as location,
+                AI.latitude,
+                AI.longitude,
+                (
+                    ACOS(
+                        COS(RADIANS(in_latitude)) * COS(RADIANS(AI.latitude)) * COS(RADIANS(AI.longitude) - RADIANS(in_longitude)) + SIN(RADIANS(in_latitude)) * SIN(RADIANS(AI.latitude))
+                    ) * 6371
+                ) AS distance_in_km,
+                DATE_FORMAT(AI.created_at, '%d %b %y') as Create_Date,
+                AI.modified_at as Modify_Date,
+                CASE WHEN AI.modified_at > AI.created_at THEN AI.modified_at ELSE AI.created_at END AS ORDER_DATE,
+                "" as office_furnished,
+                '' AS car_registration_state,
+                0 as car_km,
+                '' as owner,
+                0 as Bedroom,
+                0 as Bathroom,
+                0 as Cabin,
+                0 as Washroom,
+                0 as Square_Feet,
+                '' as Mobile_ram,
+                '' as Mobile_rom,
+                0 as year_of_registration,
+                0 as vehicle_km,
+                '' as Job_type,
+                '' as Job_salary_period
+            FROM
+                bsapp_db.all_inventory_mast AS AI
+                LEFT JOIN bsapp_db.category_mast CAT ON AI.cat_id = CAT.id
+                LEFT JOIN bsapp_db.sub_category_mast SUB ON AI.sub_cat_id = SUB.id
+                LEFT JOIN bsapp_db.ads_mast AD ON AI.inventory_type = AD.inventory_type
+				left join bsapp_db.package_inventory_mast PI ON AI.all_inventory_code = PI.inventory_code and AI.inventory_type = PI.inventory_type
+				left join bsapp_db.purchase_ads_mast PA ON PI.purchase_ads_id = PA.id
+            WHERE
+                 PA.is_active = 1
+            HAVING
+                distance_in_km BETWEEN in_from
+                AND in_to
+            ORDER BY
+                distance_in_km ASC
+        )
+        UNION
+        (
+            SELECT
+                CR.car_rent_inventory_code AS ID,
+                CAT.cat_name as Category,
+                SUB.sub_cat_name as Sub_category,
+                CR.c_picture_link_1 as Image,
+                CR.car_title as Name,
+                CR.c_price as Price,
+                0 as from_salary,
+                0 as to_salary,
+                CR.c_location as location,
+                CR.latitude,
+                CR.longitude,
+                (
+                    ACOS(
+                        COS(RADIANS(in_latitude)) * COS(RADIANS(CR.latitude)) * COS(RADIANS(CR.longitude) - RADIANS(in_longitude)) + SIN(RADIANS(in_latitude)) * SIN(RADIANS(CR.latitude))
+                    ) * 6371
+                ) AS distance_in_km,
+                DATE_FORMAT(CR.created_at, '%d %b %y') as Create_Date,
+                CR.modified_at as Modify_Date,
+                CASE WHEN CR.modified_at > CR.created_at THEN CR.modified_at ELSE CR.created_at END AS ORDER_DATE,
+                "" as office_furnished,
+                '' AS car_registration_state,
+                c_km_limit as car_km,
+                '' as owner,
+                0 as Bedroom,
+                0 as Bathroom,
+                0 as Cabin,
+                0 as Washroom,
+                0 as Square_Feet,
+                '' as Mobile_ram,
+                '' as Mobile_rom,
+                0 as year_of_registration,
+                0 as vehicle_km,
+                '' as Job_type,
+                '' as Job_salary_period
+            FROM
+                bsapp_db.car_rent_inventory_mast CR
+                LEFT JOIN bsapp_db.category_mast CAT ON CR.cat_id = CAT.id
+                LEFT JOIN bsapp_db.sub_category_mast SUB ON CR.sub_cat_id = SUB.id
+                LEFT JOIN bsapp_db.ads_mast AD ON CR.car_rent_inventory_code = AD.inventory_code
+				left join bsapp_db.package_inventory_mast PI ON CR.car_rent_inventory_code = PI.inventory_code and CR.inventory_type = PI.inventory_type
+				left join bsapp_db.purchase_ads_mast PA ON PI.purchase_ads_id = PA.id
+            WHERE
+				PA.is_active = 1
+            HAVING
+                distance_in_km BETWEEN in_from
+                AND in_to
+            ORDER BY
+                distance_in_km ASC
+        )
+        UNION
+        (
+            SELECT
+                JI.job_inventory_code AS ID,
+                CAT.cat_name as Category,
+                SUB.sub_cat_name as Sub_category,
+                JI.j_picture_link_1 as Image,
+                JI.j_title as Name,
+                0 as price,
+                JI.from_salary as From_salary,
+                JI.to_salary as To_salary,
+                JI.j_location as location,
+                JI.latitude,
+                JI.longitude,
+                (
+                    ACOS(
+                        COS(RADIANS(in_latitude)) * COS(RADIANS(JI.latitude)) * COS(RADIANS(JI.longitude) - RADIANS(in_longitude)) + SIN(RADIANS(in_latitude)) * SIN(RADIANS(JI.latitude))
+                    ) * 6371
+                ) AS distance_in_km,
+                DATE_FORMAT(JI.created_at, '%d %b %y') as Create_Date,
+                JI.modified_at as Modify_Date,
+                CASE WHEN JI.modified_at > JI.created_at THEN JI.modified_at ELSE JI.created_at END AS ORDER_DATE,
+                "" as office_furnished,
+                '' AS car_registration_state,
+                0 as car_km,
+                '' as owner,
+                0 as Bedroom,
+                0 as Bathroom,
+                0 as Cabin,
+                0 as Washroom,
+                0 as Square_Feet,
+                '' as Mobile_ram,
+                '' as Mobile_rom,
+                0 as year_of_registration,
+                0 as vehicle_km,
+                JT.j_type_name as Job_type,
+                SP.s_p_name as Job_salary_period
+            FROM
+                bsapp_db.job_inventory_mast JI
+                LEFT JOIN bsapp_db.category_mast CAT ON JI.cat_id = CAT.id
+                LEFT JOIN bsapp_db.sub_category_mast SUB ON JI.sub_cat_id = SUB.id
+                LEFT JOIN bsapp_db.job_type_mast JT ON JT.j_type_id = JI.j_type_id
+                LEFT JOIN bsapp_db.salary_period_mast SP ON SP.s_p_id = JI.s_p_id
+                LEFT JOIN bsapp_db.ads_mast AD ON JI.job_inventory_code = AD.inventory_code
+                left join bsapp_db.package_inventory_mast PI ON JI.job_inventory_code = PI.inventory_code and JI.inventory_type = PI.inventory_type
+				left join bsapp_db.purchase_ads_mast PA ON PI.purchase_ads_id = PA.id
+            WHERE
+                PA.is_active = 1
+            HAVING
+                distance_in_km BETWEEN in_from
+                AND in_to
+            ORDER BY
+                distance_in_km ASC
+        )
+        UNION
+        (
+            SELECT
+                MI.mo_inventory_code AS ID,
+                CAT.cat_name as Category,
+                SUB.sub_cat_name as Sub_category,
+                MI.mo_picture_link_1 as Image,
+                MI.mo_title as Name,
+                MI.mo_price as Price,
+                0 as from_salary,
+                0 as to_salary,
+                MI.location as location,
+                MI.latitude,
+                MI.longitude,
+                (
+                    ACOS(
+                        COS(RADIANS(in_latitude)) * COS(RADIANS(MI.latitude)) * COS(RADIANS(MI.longitude) - RADIANS(in_longitude)) + SIN(RADIANS(in_latitude)) * SIN(RADIANS(MI.latitude))
+                    ) * 6371
+                ) AS distance_in_km,
+                DATE_FORMAT(MI.created_at, '%d %b %y') as Create_Date,
+                MI.modified_at as Modify_Date,
+                CASE WHEN MI.modified_at > MI.created_at THEN MI.modified_at ELSE MI.created_at END AS ORDER_DATE,
+                "" as office_furnished,
+                '' AS car_registration_state,
+                0 as car_km,
+                '' as owner,
+                0 as Bedroom,
+                0 as Bathroom,
+                0 as Cabin,
+                0 as Washroom,
+                0 as Square_Feet,
+                RAM.value AS Mobile_ram,
+                ROM.value AS Mobile_rom,
+                0 as year_of_registration,
+                0 as vehicle_km,
+                '' as Job_type,
+                '' as Job_salary_period
+            FROM
+                bsapp_db.mobile_inventory_mast MI
+                LEFT JOIN bsapp_db.category_mast CAT ON MI.cat_id = CAT.id
+                LEFT JOIN bsapp_db.sub_category_mast SUB ON MI.sub_cat_id = SUB.id
+                LEFT JOIN bsapp_db.ads_mast AD ON MI.mo_inventory_code = AD.inventory_code
+                LEFT JOIN bsapp_db.mobile_ram_mast RAM ON RAM.id = MI.mo_ram
+                LEFT JOIN bsapp_db.mobile_rom_mast ROM ON ROM.id = MI.mo_rom
+                left join bsapp_db.package_inventory_mast PI ON MI.mo_inventory_code = PI.inventory_code and MI.inventory_type = PI.inventory_type
+				left join bsapp_db.purchase_ads_mast PA ON PI.purchase_ads_id = PA.id
+            WHERE
+                PA.is_active = 1
+            HAVING
+                distance_in_km BETWEEN in_from
+                AND in_to
+            ORDER BY
+                distance_in_km ASC
+        )
+        UNION
+        (
+            SELECT
+                OI.office_inventory_code AS ID,
+                CAT.cat_name as Category,
+                SUB.sub_cat_name as Sub_category,
+                OI.o_picture_link_1 as Image,
+                OI.o_title as Name,
+                OI.o_price as Price,
+                0 as from_salary,
+                0 as to_salary,
+                OI.o_location as location,
+                OI.latitude,
+                OI.longitude,
+                (
+                    ACOS(
+                        COS(RADIANS(in_latitude)) * COS(RADIANS(OI.latitude)) * COS(RADIANS(OI.longitude) - RADIANS(in_longitude)) + SIN(RADIANS(in_latitude)) * SIN(RADIANS(OI.latitude))
+                    ) * 6371
+                ) AS distance_in_km,
+                DATE_FORMAT(OI.created_at, '%d %b %y') as Create_Date,
+                OI.modified_at as Modify_Date,
+                CASE WHEN OI.modified_at > OI.created_at THEN OI.modified_at ELSE OI.created_at END AS ORDER_DATE,
+                PF.p_furnishing_name as office_furnished,
+                '' AS car_registration_state,
+                0 as car_km,
+                '' as owner,
+                0 as Bedroom,
+                0 as Bathroom,
+                OC.value as Cabin,
+                OW.value as Washroom,
+                OI.o_sq_ft as Square_Feet,
+                '' as Mobile_ram,
+                '' as Mobile_rom,
+                0 as year_of_registration,
+                0 as vehicle_km,
+                '' as Job_type,
+                '' as Job_salary_period
+            FROM
+                bsapp_db.office_inventory_mast OI
+                LEFT JOIN bsapp_db.office_cabin_mast OC ON OI.cabin = OC.id
+                LEFT JOIN bsapp_db.office_washroom_mast OW ON OI.washroom = OW.id
+                LEFT JOIN bsapp_db.category_mast CAT ON OI.cat_id = CAT.id
+                LEFT JOIN bsapp_db.property_furnishing_mast PF ON OI.p_furnishing_id = PF.p_furnishing_id
+                LEFT JOIN bsapp_db.sub_category_mast SUB ON OI.sub_cat_id = SUB.id
+                LEFT JOIN bsapp_db.ads_mast AD ON OI.office_inventory_code = AD.inventory_code
+                left join bsapp_db.package_inventory_mast PI ON OI.office_inventory_code = PI.inventory_code and OI.inventory_type = PI.inventory_type
+				left join bsapp_db.purchase_ads_mast PA ON PI.purchase_ads_id = PA.id
+                where PA.is_active = 1
+            HAVING
+                distance_in_km BETWEEN in_from
+                AND in_to
+            ORDER BY
+                distance_in_km ASC
+        )
+        UNION
+        (
+            SELECT
+                PI.property_inventory_code AS ID,
+                CAT.cat_name as Category,
+                SUB.sub_cat_name as Sub_category,
+                PI.p_picture_link_1 as Image,
+                PI.p_title as Name,
+                PI.p_price as Price,
+                0 as from_salary,
+                0 as to_salary,
+                PI.p_location as location,
+                PI.latitude,
+                PI.longitude,
+                (
+                    ACOS(
+                        COS(RADIANS(in_latitude)) * COS(RADIANS(PI.latitude)) * COS(RADIANS(PI.longitude) - RADIANS(in_longitude)) + SIN(RADIANS(in_latitude)) * SIN(RADIANS(PI.latitude))
+                    ) * 6371
+                ) AS distance_in_km,
+                DATE_FORMAT(PI.created_at, '%d %b %y') as Create_Date,
+                PI.modified_at as Modify_Date,
+                CASE WHEN PI.modified_at > PI.created_at THEN PI.modified_at ELSE PI.created_at END AS ORDER_DATE,
+                "" as office_furnished,
+                '' AS car_registration_state,
+                0 as car_km,
+                '' as owner,
+                BED.value as Bedroom,
+                BAT.value as Bathroom,
+                0 as Cabin,
+                0 as Washroom,
+                PI.p_sq_ft as Square_Feet,
+                '' as Mobile_ram,
+                '' as Mobile_rom,
+                0 as year_of_registration,
+                0 as vehicle_km,
+                '' as Job_type,
+                '' as Job_salary_period
+            FROM
+                bsapp_db.property_inventory_mast PI
+                LEFT JOIN bsapp_db.category_mast CAT ON PI.cat_id = CAT.id
+                LEFT JOIN bsapp_db.property_bathroom_mast BAT ON PI.p_bathroom = BAT.id
+                LEFT JOIN bsapp_db.property_bedroom_mast BED ON PI.p_bedroom = BED.id
+                LEFT JOIN bsapp_db.sub_category_mast SUB ON PI.sub_cat_id = SUB.id
+                LEFT JOIN bsapp_db.ads_mast AD ON PI.property_inventory_code = AD.inventory_code
+                left join bsapp_db.package_inventory_mast PIM ON PI.property_inventory_code = PIM.inventory_code and PI.inventory_type = PIM.inventory_type
+				left join bsapp_db.purchase_ads_mast PA ON PIM.purchase_ads_id = PA.id
+				
+            WHERE
+                PA.is_active = 1
+            HAVING
+                distance_in_km BETWEEN in_from
+                AND in_to
+            ORDER BY
+                distance_in_km ASC
+        )
+        UNION
+        (
+            SELECT
+                VI.vehicle_inventory_code AS ID,
+                CAT.cat_name as Category,
+                SUB.sub_cat_name as Sub_category,
+                VI.v_picture_link_1 as Image,
+                VI.v_title as Name,
+                VI.v_price as Price,
+                0 as from_salary,
+                0 as to_salary,
+                VI.v_location as location,
+                VI.latitude,
+                VI.longitude,
+                (
+                    ACOS(
+                        COS(RADIANS(in_latitude)) * COS(RADIANS(VI.latitude)) * COS(RADIANS(VI.longitude) - RADIANS(in_longitude)) + SIN(RADIANS(in_latitude)) * SIN(RADIANS(VI.latitude))
+                    ) * 6371
+                ) AS distance_in_km,
+                DATE_FORMAT(VI.created_at, '%d %b %y') as Create_Date,
+                VI.modified_at as Modify_Date,
+                CASE WHEN VI.modified_at > VI.created_at THEN VI.modified_at ELSE VI.created_at END AS ORDER_DATE,
+                "" as office_furnished,
+                '' AS car_registration_state,
+                0 as car_km,
+                '' as owner,
+                0 as Bedroom,
+                0 as Bathroom,
+                0 as Cabin,
+                0 as Washroom,
+                0 as Square_Feet,
+                '' as Mobile_ram,
+                '' as Mobile_rom,
+                YM.value as year_of_registration,
+                VI.kms as vehicle_km,
+                '' as Job_type,
+                '' as Job_salary_period
+            FROM
+                bsapp_db.vehicle_inventory_mast VI
+                LEFT JOIN bsapp_db.category_mast CAT ON VI.cat_id = CAT.id
+                LEFT JOIN bsapp_db.sub_category_mast SUB ON VI.sub_cat_id = SUB.id
+                LEFT JOIN bsapp_db.year_mast YM ON VI.year = YM.id
+                LEFT JOIN bsapp_db.ads_mast AD ON VI.vehicle_inventory_code = AD.inventory_code
+                left join bsapp_db.package_inventory_mast PI ON VI.vehicle_inventory_code = PI.inventory_code and VI.inventory_type = PI.inventory_type
+				left join bsapp_db.purchase_ads_mast PA ON PI.purchase_ads_id = PA.id
+            WHERE
+                PA.is_active = 1
+            HAVING
+                distance_in_km BETWEEN in_from
+                AND in_to
+            ORDER BY
+                distance_in_km ASC
+        )
+    ) AS SUBQ
+    ORDER BY ORDER_DATE DESC
+limit
+    in_limit offset in_offset;
+
+END
